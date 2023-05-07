@@ -1,5 +1,15 @@
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    error::Error,
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
+};
 
+/// An A* algorithm variation that finds the path with minimal number of turns in a maze
+/// reguired to get from (0,1) to (X-1, Y-2)
+///
+/// It returns the number of turns if available
 pub fn solve(input: Maze) -> Option<usize> {
     let start_pos = (0, 1);
     let goal = (input.max_x(), input.max_y() - 1);
@@ -156,6 +166,48 @@ fn neighbours((x, y): Pos, maze: &Maze) -> impl Iterator<Item = (Pos, Direction)
         }
         _ => None,
     })
+}
+
+pub fn read_from_file(path: impl AsRef<Path>) -> Result<Maze, Box<dyn Error>> {
+    let file = File::open(path)?;
+    let mut buf = BufReader::new(file);
+
+    let mut dimensions = String::new();
+    buf.read_line(&mut dimensions)?;
+
+    let mut dimensions = dimensions.trim().split(',');
+
+    let x: usize = dimensions
+        .next()
+        .ok_or("Failed to read X")?
+        .parse()
+        .map_err(|e| format!("X is not a valid integer: {e}"))?;
+
+    let y: usize = dimensions
+        .next()
+        .ok_or("Failed to read Y")?
+        .parse()
+        .map_err(|e| format!("Y is not a valid integer: {e}"))?;
+
+    let maze: Vec<_> = buf
+        .lines()
+        .map(|line| {
+            let line = line.map_err(|e| format!("Failed to read line {e}"))?;
+            let row: Vec<_> = line.chars().map(|c| c == '1').collect();
+
+            if row.len() != x {
+                Err("Invalid row length".to_string())
+            } else {
+                Ok(row)
+            }
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+
+    if maze.len() != y {
+        Err("Invalid number of rows".into())
+    } else {
+        Ok(maze)
+    }
 }
 
 #[cfg(test)]
