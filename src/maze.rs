@@ -1,50 +1,43 @@
-use std::error::Error;
+use std::cmp::Ordering;
 
 pub fn solve(input: Maze) -> Option<usize> {
     let start_pos = (0, 1);
     let goal = (input.max_x(), input.max_y() - 1);
 
-    let mut open =
-        std::collections::HashMap::<(usize, usize), (usize, usize, Option<Direction>)>::new();
-    let mut closed = std::collections::HashMap::<(usize, usize), usize>::new();
+    let mut open = std::collections::BinaryHeap::<Next>::new();
+    let mut closed = std::collections::HashMap::<Pos, usize>::new();
 
-    open.insert(start_pos, (0, 0, None));
+    open.push(Next {
+        pos: start_pos,
+        ..Default::default()
+    });
 
     loop {
-        let next = open
-            .iter()
-            .min_by(|l, r| l.1 .0.cmp(&r.1 .0))
-            .map(|(p, (f, g, d))| (*p, (*f, *g, *d)));
+        let next = open.pop();
 
-        println!("NEXT: {:?}", next);
-
-        if let Some((pos, (of, og, d))) = next {
-            if pos == goal {
-                return Some(og);
+        if let Some(next) = next {
+            if next.pos == goal {
+                return Some(next.g);
             }
 
-            for n in neighbours(pos, &input) {
-                let g = g(d, n.1, og);
-                let h = h(n.1, n.0, goal);
+            for (pos, direction) in neighbours(next.pos, &input) {
+                let g = g(next.direction, direction, next.g);
+                let h = h(direction, pos, goal);
                 let f = g + h;
 
-                match closed.get(&n.0) {
+                match closed.get(&pos) {
                     Some(c) if *c < f => continue,
                     _ => {}
                 }
 
-                match open.get(&n.0) {
-                    Some((o, _, _)) if *o < f => continue,
-                    _ => {}
+                if open.iter().find(|o| o.pos == pos && o.f < f).is_some() {
+                    continue;
                 }
 
-                println!("Adding {:?} with f {}", n.1, f);
-
-                open.insert(n.0, (f, g, Some(n.1)));
+                open.push(Next { pos, direction: Some(direction), g, f } );
             }
 
-            open.remove(&pos);
-            closed.insert(pos, of);
+            closed.insert(next.pos, next.f);
         } else {
             return None;
         }
@@ -86,6 +79,31 @@ fn h(d: Direction, (pos_x, pos_y): Pos, (goal_x, goal_y): Pos) -> usize {
 
         (Direction::Left, _, y) if y == goal_y => 3,
         _ => 2,
+    }
+}
+
+/// Represents a A* algorithm path candidate
+#[derive(PartialEq, Eq, Default)]
+struct Next {
+    pub pos: Pos,
+    /// Previous direction used to detect corners on the path
+    pub direction: Option<Direction>, 
+    /// A* "g" - corners taken so far
+    pub g: usize, 
+    /// A* "f" - estimated total cost to get to the goal using this candidate
+    pub f: usize, 
+}
+
+impl Ord for Next {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.f.cmp(&self.f)
+    }
+
+}
+
+impl PartialOrd for Next {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
