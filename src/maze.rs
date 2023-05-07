@@ -4,10 +4,10 @@ pub fn solve(input: Maze) -> Option<usize> {
     let start_pos = (0, 1);
     let goal = (input.max_x(), input.max_y() - 1);
 
-    let mut open = std::collections::BinaryHeap::<Next>::new();
+    let mut open = std::collections::BinaryHeap::<Candidate>::new();
     let mut closed = std::collections::HashMap::<Pos, usize>::new();
 
-    open.push(Next {
+    open.push(Candidate {
         pos: start_pos,
         ..Default::default()
     });
@@ -34,7 +34,12 @@ pub fn solve(input: Maze) -> Option<usize> {
                     continue;
                 }
 
-                open.push(Next { pos, direction: Some(direction), g, f } );
+                open.push(Candidate {
+                    pos,
+                    direction: Some(direction),
+                    g,
+                    f,
+                });
             }
 
             closed.insert(next.pos, next.f);
@@ -84,24 +89,23 @@ fn h(d: Direction, (pos_x, pos_y): Pos, (goal_x, goal_y): Pos) -> usize {
 
 /// Represents a A* algorithm path candidate
 #[derive(PartialEq, Eq, Default)]
-struct Next {
+struct Candidate {
     pub pos: Pos,
     /// Previous direction used to detect corners on the path
-    pub direction: Option<Direction>, 
+    pub direction: Option<Direction>,
     /// A* "g" - corners taken so far
-    pub g: usize, 
+    pub g: usize,
     /// A* "f" - estimated total cost to get to the goal using this candidate
-    pub f: usize, 
+    pub f: usize,
 }
 
-impl Ord for Next {
+impl Ord for Candidate {
     fn cmp(&self, other: &Self) -> Ordering {
         other.f.cmp(&self.f)
     }
-
 }
 
-impl PartialOrd for Next {
+impl PartialOrd for Candidate {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
