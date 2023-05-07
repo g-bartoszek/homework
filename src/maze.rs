@@ -6,8 +6,7 @@ use std::{
     path::Path,
 };
 
-/// An A* algorithm variation that finds the path with minimal number of turns in a maze
-/// reguired to get from (0,1) to (X-1, Y-2)
+/// An A* algorithm variation that finds the path from (0,1) to (X-1, Y-2) that contains the minimal number of turns
 ///
 /// It returns the number of turns if available
 pub fn solve(input: Maze) -> Option<usize> {
@@ -40,7 +39,7 @@ pub fn solve(input: Maze) -> Option<usize> {
                     _ => {}
                 }
 
-                if open.iter().find(|o| o.pos == pos && o.f < f).is_some() {
+                if open.iter().any(|o| o.pos == pos && o.f < f) {
                     continue;
                 }
 
@@ -77,6 +76,8 @@ fn g(
 // This version does it by taking the minimal number of corners required to get to the goal assuming there are no walls in the maze
 fn h(d: Direction, (pos_x, pos_y): Pos, (goal_x, goal_y): Pos) -> usize {
     match (d, pos_x, pos_y) {
+        (_, x, y) if x == goal_x && y == goal_y => 0,
+
         (Direction::Right, _, y) if y == goal_y => 0,
         (Direction::Right, _, y) if y != goal_y => 1,
 
@@ -98,7 +99,7 @@ fn h(d: Direction, (pos_x, pos_y): Pos, (goal_x, goal_y): Pos) -> usize {
 }
 
 /// Represents a A* algorithm path candidate
-#[derive(PartialEq, Eq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 struct Candidate {
     pub pos: Pos,
     /// Previous direction used to detect corners on the path
@@ -111,7 +112,11 @@ struct Candidate {
 
 impl Ord for Candidate {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.f.cmp(&self.f)
+        other
+            .f
+            .cmp(&self.f)
+            .then_with(|| self.direction.cmp(&other.direction))
+            .then_with(|| self.pos.cmp(&other.pos))
     }
 }
 
@@ -139,7 +144,7 @@ impl MazeExt for Maze {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 enum Direction {
     Up,
     Down,
@@ -288,5 +293,11 @@ mod tests {
                            .........";
 
         assert_eq!(solve(to_input(input)), Some(1));
+    }
+
+    #[test]
+    fn big_maze() {
+        let input = vec![vec![true; 1000]; 1000];
+        assert_eq!(solve(input), Some(1));
     }
 }

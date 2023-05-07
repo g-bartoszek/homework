@@ -14,7 +14,9 @@ struct Args {
 
 #[derive(Subcommand, Clone)]
 enum Commands {
+    /// Find path in the given maze with minimal number of turns
     Maze { path: String },
+    /// Convert binary to decimal
     Numbers { path: String },
 }
 
