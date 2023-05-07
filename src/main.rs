@@ -1,7 +1,10 @@
 use std::error::Error;
 
 use clap::{Parser, Subcommand};
-use homework::maze::{read_from_file, solve};
+use homework::{
+    maze::{read_from_file, solve},
+    numbers::convert_numbers,
+};
 
 #[derive(Parser)]
 struct Args {
@@ -12,6 +15,7 @@ struct Args {
 #[derive(Subcommand, Clone)]
 enum Commands {
     Maze { path: String },
+    Numbers { path: String },
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -23,6 +27,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                 println!("{solution}")
             } else {
                 println!("No solution")
+            }
+        }
+        Commands::Numbers { path } => {
+            for n in convert_numbers(homework::numbers::read_from_file(&path)?) {
+                match n {
+                    Ok(n) => println!("{n}"),
+                    Err(e) => println!("{e}"),
+                }
             }
         }
     }
